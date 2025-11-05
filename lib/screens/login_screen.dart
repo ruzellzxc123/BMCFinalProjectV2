@@ -35,15 +35,12 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-
-      // inside your login success block (after signInWithEmailAndPassword completes)
+      
       final uid = FirebaseAuth.instance.currentUser?.uid;
       debugPrint('LOGIN success -> uid: $uid');
 
-      // Force token refresh (if using custom claims)
       await FirebaseAuth.instance.currentUser?.getIdToken(true);
 
-      // Read Firestore users doc and log role
       try {
         final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
         debugPrint('Firestore user doc exists=${doc.exists} role=${doc.data()?['role']}');
@@ -51,7 +48,6 @@ class _LoginScreenState extends State<LoginScreen> {
         debugPrint('Error reading user role: $e');
       }
 
-      // NAVIGATE DIRECTLY as a reliable fallback so the app shows Home immediately
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/home');
       }
@@ -91,7 +87,6 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       body: Stack(
         children: [
-          // subtle background
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -117,12 +112,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Logo / Title
                           SizedBox(
                             height: 64,
                             child: Row(
                               children: [
-                                // if you have a logo: Image.asset('assets/images/logo.png', height: 48),
                                 const Text(
                                   'ZellLux',
                                   style: TextStyle(
@@ -136,7 +129,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           const SizedBox(height: 18),
-                          // Email
                           TextFormField(
                             controller: _emailController,
                             decoration: InputDecoration(
@@ -162,7 +154,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             },
                           ),
                           const SizedBox(height: 14),
-                          // Password
                           TextFormField(
                             controller: _passwordController,
                             obscureText: true,

@@ -1,8 +1,7 @@
-// ...existing code...
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // 1. ADD THIS IMPORT
-// ...existing code...
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -11,9 +10,8 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  // ...existing code...
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance; // 2. ADD THIS 
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
@@ -37,7 +35,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         password: _passwordController.text.trim(),
       );
 
-      // If user created, create Firestore profile with role 'user'
       if (userCredential.user != null) {
         await _firestore
             .collection('users')
@@ -49,7 +46,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         });
       }
 
-      // Optionally navigate or let AuthWrapper handle navigation
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Signup successful')),
       );
@@ -68,10 +64,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ...existing UI code (form should call _signUp on submit)...
     return Scaffold(
-      // ...existing UI...
     );
   }
 }
-// ...existing code...

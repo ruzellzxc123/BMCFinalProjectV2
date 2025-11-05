@@ -1,4 +1,3 @@
-// ...existing code...
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:ecommerce_app/screens/home_screen.dart';
@@ -29,4 +28,3 @@ class AuthWrapper extends StatelessWidget {
     );
   }
 }
-// ...existing code...
