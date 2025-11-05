@@ -1,126 +1,175 @@
-// ...existing code...
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ecommerce_app/widgets/product_card.dart';
+import 'package:ecommerce_app/screens/product_detail_screen.dart';
+import 'package:ecommerce_app/screens/admin_panel_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:ecommerce_app/providers/cart_provider.dart';
+import 'package:ecommerce_app/screens/cart_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
-  static const Color _bg = Color(0xFF0F0D0E);
-  static const Color _gold = Color(0xFFD4AF37);
+class _HomeScreenState extends State<HomeScreen> {
+  String _userRole = 'user';
+  final User? _currentUser = FirebaseAuth.instance.currentUser;
+
+  StreamSubscription<User?>? _authSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserRole();
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) _fetchUserRole();
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchUserRole() async {
+    final user = FirebaseAuth.instance.currentUser;
+    debugPrint('fetchUserRole -> user=${user?.uid}');
+    if (user == null) return;
+    try {
+      await user.getIdToken(true);
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      debugPrint('fetchUserRole doc.exists=${doc.exists} data=${doc.data()}');
+      if (doc.exists && doc.data() != null) {
+        setState(() {
+          _userRole = (doc.data()!['role'] ?? 'user') as String;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching role: $e');
+    }
+  }
+
+  Future<void> _signOut() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      debugPrint('Error signing out: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
     return Scaffold(
-      backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text('ZellLux', style: TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(_currentUser != null ? 'Welcome, ${_currentUser!.email}' : 'Home'),
         actions: [
+          Consumer<CartProvider>(
+            builder: (context, cart, child) {
+              debugPrint('HomeScreen cart count=${cart.itemCount}');
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.shopping_cart),
+                    onPressed: () {
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CartScreen()));
+                    },
+                  ),
+                  if (cart.itemCount > 0)
+                    Positioned(
+                      right: 6,
+                      top: 8,
+                      child: CircleAvatar(
+                        radius: 9,
+                        backgroundColor: Colors.red,
+                        child: Text(
+                          cart.itemCount.toString(),
+                          style: const TextStyle(fontSize: 10, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+          if (_userRole == 'admin')
+            IconButton(
+              icon: const Icon(Icons.admin_panel_settings),
+              tooltip: 'Admin Panel',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const AdminPanelScreen()),
+                );
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.logout),
-            color: _gold,
-            onPressed: () => FirebaseAuth.instance.signOut(),
+            tooltip: 'Logout',
+            onPressed: _signOut,
           ),
         ],
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 920),
-          child: Padding(
-            padding: const EdgeInsets.all(28.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                // Welcome card
-                Card(
-                  color: Colors.black87,
-                  elevation: 8,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(22.0),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 84,
-                          height: 84,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade800,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.shopping_bag, color: Colors.white70, size: 36),
-                        ),
-                        const SizedBox(width: 18),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Welcome${user != null ? ', ${user.email}' : ''}',
-                                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 6),
-                              Text('Explore the latest collection from ZellLux.',
-                                  style: TextStyle(color: Colors.white.withOpacity(0.85))),
-                            ],
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _gold,
-                            foregroundColor: Colors.black,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          child: const Text('Shop Now'),
-                        )
-                      ],
-                    ),
-                  ),
-                ),
-                // Spacer
-                const SizedBox(height: 28),
-                // Placeholder grid (elegant product tiles)
-                Expanded(
-                  child: GridView.builder(
-                    itemCount: 6,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: 16, crossAxisSpacing: 16, childAspectRatio: 0.75),
-                    itemBuilder: (context, index) {
-                      return Card(
-                        color: Colors.grey.shade900,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade800,
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                ),
-                                child: const Center(child: Icon(Icons.image, color: Colors.white24, size: 48)),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Luxury Item', style: TextStyle(color: Colors.white.withOpacity(0.95), fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 6),
-                                  Text('\$1,250', style: TextStyle(color: _gold, fontWeight: FontWeight.w700)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('products')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Text('No products found. Add some in the Admin Panel!'),
+            );
+          }
+
+          final products = snapshot.data!.docs;
+
+          return GridView.builder(
+            padding: const EdgeInsets.all(10.0),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 3 / 4,
             ),
-          ),
-        ),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              final productDoc = products[index];
+              final productData = productDoc.data() as Map<String, dynamic>;
+
+              final name = (productData['name'] ?? '') as String;
+              final price = (productData['price'] is num)
+                  ? (productData['price'] as num).toDouble()
+                  : double.tryParse('${productData['price']}') ?? 0.0;
+              final imageUrl = (productData['imageUrl'] ?? '') as String;
+
+              return ProductCard(
+                productName: name,
+                price: price,
+                imageUrl: imageUrl,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ProductDetailScreen(
+                        productData: productData,
+                        productId: productDoc.id,
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        },
       ),
     );
   }

@@ -1,5 +1,5 @@
-// ...existing code...
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -36,8 +36,20 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
 
-      debugPrint('LOGIN success -> uid: ${userCred.user?.uid ?? "null"}');
-      debugPrint('CURRENT USER after login -> ${FirebaseAuth.instance.currentUser?.uid ?? "null"}');
+      // inside your login success block (after signInWithEmailAndPassword completes)
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      debugPrint('LOGIN success -> uid: $uid');
+
+      // Force token refresh (if using custom claims)
+      await FirebaseAuth.instance.currentUser?.getIdToken(true);
+
+      // Read Firestore users doc and log role
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        debugPrint('Firestore user doc exists=${doc.exists} role=${doc.data()?['role']}');
+      } catch (e) {
+        debugPrint('Error reading user role: $e');
+      }
 
       // NAVIGATE DIRECTLY as a reliable fallback so the app shows Home immediately
       if (mounted) {
@@ -63,7 +75,6 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-// ...existing code...
 
   static const Color _bgDark = Color(0xFF111111);
   static const Color _panel = Color(0xFFF7F3F2);
@@ -216,4 +227,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-// ...existing code...
